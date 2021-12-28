@@ -6,7 +6,7 @@
 export default {
   name: "App",
   components: {},
-};
+}
 </script>
 
 <style>
@@ -44,7 +44,7 @@ ul {
 
 .btn {
   white-space: nowrap;
-  background-color: #dee2e6;
+  background-color: #fad586;
   border: none;
   padding: 7px 12px;
   border-radius: 4px;
@@ -52,21 +52,29 @@ ul {
 }
 
 .btn:hover {
-  background-color: #ced4da;
+  background-color: #fbd148;
 }
 
 .btn.login {
-  background-color: #4263eb;
+  background-color: #22756c;
   color: #fff;
   padding: 11px 0;
 }
 
 .btn.login:hover {
-  background-color: #3b5bdb;
+  background-color: #1e5e56;
+}
+
+.btn.cancel {
+  background-color: #d7d7d6;
+}
+
+.btn.cancel:hover {
+  background-color: #c8c8c6;
 }
 
 .btn.search:hover {
-  background-color: #dee2e6;
+  background-color: #ffd43b;
 }
 
 .btn.delete {

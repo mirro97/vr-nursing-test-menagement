@@ -2,39 +2,36 @@
   <section class="result-body">
     <div class="padding-body">
       <div class="table-container search-container">
-        {{ selected }}
-        <select class="select-type" v-model="selected">
+        <select class="select-type" v-model="selectedType">
           <option value="" disabled>타입선택(이름, 학번)</option>
           <option value="이름">이름</option>
           <option value="학번">학번</option>
-          <option value="시나리오">시나리오</option>
         </select>
-        <input class="search-input" v-model="searchItem" type="text" name="" id="" placeholder="검색" />
+        <input class="search-input" v-model="searchItem" type="text" name="" id="" placeholder="검색" @keyup.enter="search" />
         <button class="btn search" @click="search">조회</button>
       </div>
       <div class="table-container">
-        <div class="search-result">검색결과 {{ count }} 건</div>
+        <div class="search-result">검색결과 {{ studentInfos.length }} 건</div>
         <div class="result-table">
           <div class="table-header">
-            <div><input type="checkbox" class="chk-all" /></div>
+            <div><input type="checkbox" class="chk-all" v-model="checkAllStudents" @click="checkAll($event.target.checked)" /></div>
             <div>이름</div>
             <div>학번</div>
             <div>생년월일</div>
             <div>전화번호</div>
           </div>
-          <div class="table-body" @click="modifyInfo()">
-            <!-- <div class="table-body" v-for="(info, infoIndex) in pResult" :key="infoIndex"> -->
-            <div><input type="checkbox" /></div>
-            <div>테스트하는테스터</div>
-            <div>201612768</div>
-            <div>1991-01-04</div>
-            <div>010-8838-8888</div>
+          <div class="table-body" v-for="(info, infoIndex) in studentInfos" :key="infoIndex">
+            <div><input type="checkbox" v-model="checkStudents" :value="info.idx" @change="isCheckAll" /></div>
+            <div @click="openModifyInfo(info.id)">{{ info.name }}</div>
+            <div @click="openModifyInfo(info.id)">{{ info.id }}</div>
+            <div @click="openModifyInfo(info.id)">{{ info.registerId }}</div>
+            <div @click="openModifyInfo(info.id)">{{ info.phoneNumber }}</div>
           </div>
         </div>
 
         <div class="icon-container">
           <button class="btn delete" @click="deleteInfo()">삭제하기</button>
-          <button class="btn add" @click="addInfo()">추가하기</button>
+          <button class="btn add" @click="openAddInfo()">추가하기</button>
 
           <div class="icon-wrapper" @click="downloadExcel()" title="download">
             <i class="fas fa-download"></i>
@@ -47,58 +44,122 @@
       </div>
     </div>
   </section>
-  <StudentModal v-if="open" @click.self="close" v-on:close="close" :modalState="curModal" />
+  <StudentModal v-if="open" @click.self="close" @close="close" :modalState="curModal" :studentId="selectedId" />
+  <UploadModal v-if="uploadOpen" @click.self="close" @close="close" />
+  <loading ref="loading" />
 </template>
 
 <script>
-import StudentModal from "../components/StudentModal.vue";
+import StudentModal from "../components/StudentModal.vue"
+import UploadModal from "../components/UploadModal.vue"
+import loading from "../components/Loading.vue"
 export default {
   components: {
     StudentModal,
+    UploadModal,
+    loading,
   },
   data() {
     return {
-      pResult: {},
-      selected: "",
+      studentInfos: {},
+      selectedType: "",
       searchItem: "",
-      count: 0,
+      selectedId: "",
       curModal: "",
+      checkStudents: [],
+      checkAllStudents: false,
       open: false,
-    };
+      uploadOpen: false,
+    }
+  },
+  created() {
+    this.getStudentInfo()
+  },
+  mounted() {
+    this.$refs.loading.isShow(true)
   },
   methods: {
-    selectType() {
-      console.log(event.target.value);
+    async getStudentInfo() {
+      const getData = await this.axios.post("/api/manager/findStudentInfoList", {})
+      this.studentInfos = getData.data.oResult.studentInfos
+      this.$refs.loading.isShow(false)
     },
-    search() {
-      console.log("검색할 단어: ", this.searchItem);
+    async search() {
+      this.$refs.loading.isShow(true)
+      if (this.selectedType === "이름") {
+        const getData = await this.axios.post("/api/manager/findStudentInfoList", { name: this.searchItem })
+        this.studentInfos = getData.data.oResult.studentInfos
+      } else if (this.selectedType === "학번") {
+        const getData = await this.axios.post("/api/manager/findStudentInfoList", { id: this.searchItem })
+        this.studentInfos = getData.data.oResult.studentInfos
+      }
+      this.$refs.loading.isShow(false)
     },
-    deleteInfo() {
-      console.log("삭제하기");
+    async deleteInfo() {
+      await this.axios.post("/api/manager/deleteStudentInfoList", { idList: this.checkStudents })
+      this.checkStudents = []
+      this.getStudentInfo()
     },
-    modifyInfo(userInfo) {
-      // 수정하기라 해당 데이터 넘겨야함
-      this.open = true;
-      this.curModal = "수정";
-      console.log("해당 열 수정하기: ", userInfo);
+    async openModifyInfo(studentId) {
+      this.open = true
+      this.curModal = "수정"
+      this.selectedId = studentId
     },
-    addInfo() {
-      // 추가하기라 데이터 넘길필요x
-      this.curModal = "추가";
-      this.open = true;
-      console.log("추가하기");
+    openAddInfo() {
+      this.curModal = "추가"
+      this.open = true
+      this.selectedId = ""
     },
-    downloadExcel() {
-      console.log("엑셀로 다운로드");
+    async downloadExcel() {
+      let url = "/api/manager/excelDownloadStudentInfoList"
+      let data = {}
+      if (this.selectedType === "이름") {
+        data.name = this.searchItem
+      } else if (this.selectedType === "학번") {
+        data.id = this.searchItem
+      }
+      await this.axios({
+        methods: "get",
+        url: url,
+        responseType: "blob",
+        params: data,
+      }).then((res) => {
+        if (res) {
+          let name = res.headers["content-disposition"].split("filename=")[1]
+          name = decodeURIComponent(name)
+          const url = window.URL.createObjectURL(new Blob([res.data], { type: res.headers["content-type"] }))
+          const link = document.createElement("a")
+          link.href = url
+          link.setAttribute("download", name)
+          document.body.appendChild(link)
+          link.click()
+
+          document.body.removeChild(link)
+        }
+      })
     },
     uploadExcel() {
-      console.log("엑셀로 업로드");
+      this.uploadOpen = true
     },
     close() {
-      this.open = false;
+      this.getStudentInfo()
+      this.uploadOpen = false
+      this.open = false
+    },
+    checkAll(checked) {
+      if (checked) {
+        for (const info in this.studentInfos) {
+          this.checkStudents[info] = this.studentInfos[info].idx
+        }
+      } else {
+        this.checkStudents.splice(0, this.checkStudents.length)
+      }
+    },
+    isCheckAll() {
+      this.checkStudents.length === this.studentInfos.length ? (this.checkAllStudents = true) : (this.checkAllStudents = false)
     },
   },
-};
+}
 </script>
 
 <style scoped>
@@ -144,7 +205,7 @@ export default {
 }
 
 .table-header {
-  background-color: #dbe4ff;
+  background-color: #d6efc7;
 }
 
 .table-body {

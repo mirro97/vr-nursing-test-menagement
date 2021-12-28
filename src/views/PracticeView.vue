@@ -2,18 +2,17 @@
   <section class="result-body">
     <div class="padding-body">
       <div class="table-container search-container">
-        {{ selected }}
-        <select class="select-type" v-model="selected">
+        <select class="select-type" v-model="selectedType">
           <option value="" disabled>타입선택(이름, 학번, 시나리오)</option>
           <option value="이름">이름</option>
           <option value="학번">학번</option>
           <option value="시나리오">시나리오</option>
         </select>
-        <input class="search-input" v-model="searchItem" type="text" name="" id="" placeholder="검색" />
+        <input class="search-input" v-model="searchItem" type="text" name="" id="" placeholder="검색" @keyup.enter="search" />
         <button class="btn search" @click="search">조회</button>
       </div>
       <div class="table-container">
-        <div class="search-result">검색결과 {{ count }} 건</div>
+        <div class="search-result">검색결과 {{ practicecInfos.length }} 건</div>
         <div class="result-table">
           <div class="table-header">
             <div>이름</div>
@@ -28,57 +27,106 @@
             <div>문제6</div>
             <div>회차</div>
           </div>
-          <div class="table-body">
-            <!-- <div class="table-body" v-for="(info, infoIndex) in pResult" :key="infoIndex"> -->
-            <div>테스트</div>
-            <div>테스트</div>
-            <div>테스트</div>
-            <div>테스트</div>
-            <div>테스트</div>
-            <div>테스트</div>
-            <div>테스트</div>
-            <div>테스트</div>
-            <div>테스트</div>
-            <div>테스트</div>
-            <div>테스트</div>
+          <div class="table-body" v-for="(info, infoIndex) in practicecInfos" :key="infoIndex">
+            <div>{{ info.name }}</div>
+            <div>{{ info.studentId }}</div>
+            <div>{{ info.scenario }}</div>
+            <div>{{ info.timeTaken }}</div>
+            <div>{{ info.ex1 }}</div>
+            <div>{{ info.ex2 }}</div>
+            <div>{{ info.ex3 }}</div>
+            <div>{{ info.ex4 }}</div>
+            <div>{{ info.ex5 }}</div>
+            <div>{{ info.ex6 }}</div>
+            <div>{{ info.round }}</div>
           </div>
         </div>
 
         <div class="icon-container">
-          <div class="icon-wrapper" title="download">
+          <div class="icon-wrapper" title="download" @click="downloadExcel()">
             <i class="fas fa-download"></i>
           </div>
         </div>
       </div>
     </div>
   </section>
+  <loading ref="loading" />
 </template>
 
 <script>
+import loading from "../components/Loading.vue"
 export default {
+  components: {
+    loading,
+  },
   data() {
     return {
-      pResult: {},
-      selected: "",
+      practicecInfos: {},
+      selectedType: "",
       searchItem: "",
-      count: 0,
-    };
+    }
+  },
+  created() {
+    this.getPracticeInfo()
+  },
+  mounted() {
+    this.$refs.loading.isShow(true)
   },
   methods: {
-    selectType() {
-      console.log(event.target.value);
+    async getPracticeInfo() {
+      const getPracticeData = await this.axios.post("/api/manager/findTestInfoList", {})
+      this.practicecInfos = getPracticeData.data.oResult.testInfos
+      this.$refs.loading.isShow(false)
     },
-    search() {
-      console.log("검색할 단어: ", this.searchItem);
+    async search() {
+      this.$refs.loading.isShow(true)
+      if (this.selectedType === "이름") {
+        const result = await this.axios.post("/api/manager/findTestInfoList", { studentName: this.searchItem })
+        this.practicecInfos = result.data.oResult.testInfos
+      } else if (this.selectedType === "학번") {
+        const result = await this.axios.post("/api/manager/findTestInfoList", { studentId: this.searchItem })
+        this.practicecInfos = result.data.oResult.testInfos
+      } else if (this.selectedType === "시나리오") {
+        const result = await this.axios.post("/api/manager/findTestInfoList", { scenario: this.searchItem })
+        this.practicecInfos = result.data.oResult.testInfos
+      }
+      this.$refs.loading.isShow(false)
+    },
+    async downloadExcel() {
+      let url = "/api/manager/excelDownloadTestInfoList"
+      let data = {}
+      if (this.selectedType === "이름") data.studentName = this.searchItem
+      else if (this.selectedType === "학번") data.studentId = this.searchItem
+      else if (this.selectedType === "시나리오") data.scenario = this.searchItem
+
+      await this.axios({
+        methods: "get",
+        url: url,
+        responseType: "blob",
+        params: data,
+      }).then((res) => {
+        if (res) {
+          let name = res.headers["content-disposition"].split("filename=")[1]
+          name = decodeURIComponent(name)
+          const url = window.URL.createObjectURL(new Blob([res.data], { type: res.headers["content-type"] }))
+          const link = document.createElement("a")
+          link.href = url
+          link.setAttribute("download", name)
+          document.body.appendChild(link)
+          link.click()
+
+          document.body.removeChild(link)
+        }
+      })
     },
   },
-};
+}
 </script>
 
 <style scoped>
 .result-body {
   width: 100%;
-  min-width: 1000px;
+  min-width: 1200px;
   height: 100vh;
   background-color: #f8f9fa;
   padding-left: 200px;
@@ -118,7 +166,7 @@ export default {
 }
 
 .table-header {
-  background-color: #dbe4ff;
+  background-color: #d6efc7;
 }
 
 .table-header > div,

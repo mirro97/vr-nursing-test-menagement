@@ -5,28 +5,30 @@
       <div class="input-container">
         <div class="m-row">
           <label for="userId">아이디: </label>
-          <input type="text" id="userId" />
+          <input v-if="modalState === '추가'" type="text" id="userId" v-model="admin.id" />
+          <input v-if="modalState === '수정'" type="text" id="userId" v-model="admin.id" readonly />
         </div>
         <div class="m-row">
           <label for="userPw">비밀번호: </label>
-          <input type="text" id="userPw" />
+          <input type="text" id="userPw" v-model="admin.password" />
         </div>
         <div class="m-row">
           <label for="name">이름: </label>
-          <input type="text" id="name" />
+          <input type="text" id="name" v-model="admin.name" />
         </div>
         <div class="m-row">
-          <label for="belong">소속: </label>
-          <input type="text" id="belong" />
+          <label for="company">소속: </label>
+          <input type="text" id="company" v-model="admin.company" />
         </div>
         <div class="m-row">
           <label for="phone">연락처: </label>
-          <input type="text" id="phone" />
+          <input type="text" id="phone" v-model="admin.phoneNumber" />
         </div>
       </div>
       <div class="btn-container">
-        <button class="btn add">{{ modalState }}</button>
-        <button class="btn" @click="close">취소하기</button>
+        <button v-if="modalState === '추가'" class="btn add" @click="addInfo()">{{ modalState }}</button>
+        <button v-if="modalState === '수정'" class="btn modify" @click="modifyInfo()">{{ modalState }}</button>
+        <button class="btn cancel" @click="close">취소하기</button>
       </div>
     </div>
   </section>
@@ -36,16 +38,53 @@
 export default {
   props: {
     modalState: String,
+    managerId: String,
   },
   data() {
-    return {};
+    return {
+      admin: {},
+    }
+  },
+  created() {
+    this.getManagerInfo()
   },
   methods: {
+    async getManagerInfo() {
+      if (this.managerId) {
+        const managerInfo = await this.axios.post("/api/admin/findManager", { id: this.managerId })
+        this.admin = managerInfo.data.oResult.adminInfo
+      } else if (this.managerId === null) {
+        this.admin = {}
+      }
+    },
+    async modifyInfo() {
+      await this.axios.post("/api/admin/updateManager", {
+        idx: this.admin.idx,
+        id: this.admin.id,
+        password: this.admin.password,
+        name: this.admin.name,
+        company: this.admin.company,
+        phoneNumber: this.admin.phoneNumber,
+      })
+      alert("사용자 정보가 수정되었습니다")
+      this.close()
+    },
+    async addInfo() {
+      await this.axios.post("/api/admin/insertManager", {
+        id: this.admin.id,
+        password: this.admin.password,
+        name: this.admin.name,
+        company: this.admin.company,
+        phoneNumber: this.admin.phoneNumber,
+      })
+      alert("사용자 정보가 추가되었습니다")
+      this.close()
+    },
     close() {
-      this.$emit("close");
+      this.$emit("close")
     },
   },
-};
+}
 </script>
 
 <style scoped>

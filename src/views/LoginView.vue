@@ -1,8 +1,8 @@
 <template>
   <div class="login-body">
     <div class="login-container">
-      <h1 class="title">로그인</h1>
-      <form class="login-form" @submit.prevent="signIn">
+      <h1 class="title">VEMC LOGIN!</h1>
+      <form class="login-form" @submit.prevent="adminlogIn">
         <div class="input-wrapper">
           <label for="userId"> ID </label>
           <input class="input-id" type="text" id="userId" v-model="userId" />
@@ -26,16 +26,30 @@ export default {
     return {
       userId: "",
       userPw: "",
-    };
+    }
   },
   methods: {
-    signIn() {
-      console.log("로그인버튼 누름");
-      if (this.userId === "p") this.$router.push("/admin/practice");
-      else if (this.userId === "s") this.$router.push("/admin/superAdmin");
+    async adminlogIn() {
+      try {
+        await this.$store
+          .dispatch("adminlogIn", {
+            id: this.userId,
+            password: this.userPw,
+          })
+          .then(() => {
+            const curType = this.$store.state.admin.type
+            this.redirect(curType)
+          })
+      } catch (e) {
+        console.error(e)
+      }
+    },
+    redirect(type) {
+      if (type === "admin") this.$router.push("/admin/superAdmin")
+      else if (type === "manager") this.$router.push("/admin/practice")
     },
   },
-};
+}
 </script>
 
 <style scoped>
@@ -45,17 +59,21 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: #d7d7d6;
 }
 
 .login-container {
-  border: 1px solid #e5e5e5;
+  background-color: #fff;
+  border-radius: 4px;
   padding: 60px 70px;
+  box-shadow: 2px 2px 10px 0px rgb(56 56 56 / 5%);
 }
 
 .title {
   font-size: 28px;
   margin-bottom: 20px;
   text-align: center;
+  font-weight: bold;
 }
 
 .login-form {
